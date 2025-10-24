@@ -4,75 +4,65 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SuperClean – Menu</title>
-
-  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-
-  <!-- External Stylesheet -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/public/style.css">
 </head>
 <body>
+  <header>
+    <img src="/public/logo.jpg" alt="Company Logo">
+    <h1>SuperClean</h1>
+  </header>
 
-<header>
-  <img src="logo.jpg" alt="Company Logo">
-  <h1>SuperClean</h1>
-</header>
+  <div class="container">
+    <div class="filter-buttons">
+      <button class="active" onclick="filterItems('all', this)">All</button>
+      <button onclick="filterItems('3.7L', this)">3.7 L</button>
+      <button onclick="filterItems('1L', this)">1 L</button>
+    </div>
 
-<div class="container">
-  <div class="filter-buttons">
-    <button class="active" onclick="filterItems('all', this)">All</button>
-    <button onclick="filterItems('3.7L', this)">3.7 L</button>
-    <button onclick="filterItems('1L', this)">1 L</button>
+    <div class="product-grid" id="productGrid"></div>
   </div>
 
-  <div class="product-grid" id="productGrid">
-    <!-- items injected by JS -->
-  </div>
-</div>
+  <footer>
+    Designed with 💧 by <strong>SuperClean</strong>
+  </footer>
 
-<footer>
-  Designed with 💧 by <strong>SuperClean</strong>
-  <span class="copyright">© 2025 SuperClean. All rights reserved.</span>
-</footer>
+  <script>
+    let items = [];
 
-<script>
-  let items = [];
+    function fetchItems() {
+      fetch('/api/items')
+        .then(res => res.json())
+        .then(data => {
+          items = data;
+          renderItems('all');
+        });
+    }
 
-  function fetchItems() {
-    fetch('/api/items')
-      .then(res => res.json())
-      .then(data => {
-        items = data;
-        renderItems('all');
-      })
-      .catch(err => console.error('Error fetching items:', err));
-  }
+    function renderItems(category) {
+      const grid = document.getElementById('productGrid');
+      grid.innerHTML = '';
+      items.forEach(it => {
+        if (category === 'all' || it.category === category) {
+          const card = document.createElement('div');
+          card.className = 'product-card';
+          card.innerHTML = `
+            <img src="${it.image}" alt="${it.name}">
+            <div class="product-name">${it.name}</div>
+            <div class="product-price">${it.price}</div>
+          `;
+          grid.appendChild(card);
+        }
+      });
+    }
 
-  function renderItems(category) {
-    const grid = document.getElementById('productGrid');
-    grid.innerHTML = '';
-    items.forEach(it => {
-      if (category === 'all' || it.category === category) {
-        const card = document.createElement('div');
-        card.className = 'product-card';
-        card.innerHTML = `
-          <img src="${it.image}" alt="${it.name}">
-          <div class="product-name">${it.name}</div>
-          <div class="product-price">${it.price}</div>
-        `;
-        grid.appendChild(card);
-      }
-    });
-  }
+    function filterItems(cat, btn) {
+      document.querySelectorAll('.filter-buttons button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderItems(cat);
+    }
 
-  function filterItems(cat, btn) {
-    document.querySelectorAll('.filter-buttons button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderItems(cat);
-  }
-
-  fetchItems();
-</script>
-
+    fetchItems();
+  </script>
 </body>
 </html>

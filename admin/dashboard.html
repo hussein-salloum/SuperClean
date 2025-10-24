@@ -4,41 +4,80 @@
   <meta charset="UTF-8">
   <title>Admin Dashboard</title>
   <style>
-    body { font-family: Arial, sans‑serif; margin:20px; }
-    form { max-width:400px; margin:auto; }
-    input, select { width:100%; padding:10px; margin:10px 0; box‑sizing:border‑box; }
-    input[type="submit"] { background:#004aad; color:white; border:none; cursor:pointer; }
-    input[type="submit"]:hover { background:#007bff; }
-    .logout { text-align:right; margin-bottom:20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    input, select { width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; }
+    input[type="submit"] { background: #004aad; color: white; border: none; cursor: pointer; }
+    input[type="submit"]:hover { background: #007bff; }
+    form { margin-bottom: 20px; }
+    img { vertical-align: middle; margin-right: 10px; }
+    .logout { text-align: right; }
   </style>
 </head>
 <body>
+  <div class="logout">
+    <form action="/admin/logout" method="post">
+      <input type="submit" value="Logout">
+    </form>
+  </div>
 
-<div class="logout">
-  <form action="/admin/logout" method="post">
-    <input type="submit" value="Logout">
+  <h2>Add New Item</h2>
+  <form action="/admin/add-item" method="post" enctype="multipart/form-data">
+    <input type="text" name="name" placeholder="Name" required>
+    <input type="text" name="price" placeholder="Price" required>
+    <select name="category" required>
+      <option value="3.7L">3.7 L</option>
+      <option value="1L">1 L</option>
+    </select>
+    <input type="file" name="image" accept="image/*">
+    <input type="submit" value="Add Item">
   </form>
-</div>
 
-<h2>Add New Item</h2>
-<form action="/admin/add‑item" method="post" enctype="multipart/form-data">
-  <label>Name:</label><br>
-  <input type="text" name="name" required><br>
+  <hr>
+  <h2>Current Items</h2>
+  <div id="itemsList"></div>
 
-  <label>Price:</label><br>
-  <input type="text" name="price" required><br>
+  <script>
+    function loadItems() {
+      fetch('/api/items')
+        .then(res => res.json())
+        .then(items => {
+          const container = document.getElementById('itemsList');
+          container.innerHTML = '';
+          if (!items.length) {
+            container.innerHTML = '<p>No items yet.</p>';
+            return;
+          }
 
-  <label>Category:</label><br>
-  <select name="category" required>
-    <option value="3.7L">3.7 L</option>
-    <option value="1L">1 L</option>
-  </select><br>
+          items.forEach((it, idx) => {
+            const div = document.createElement('div');
+            div.style.border = '1px solid #ccc';
+            div.style.padding = '10px';
+            div.style.margin = '10px 0';
+            div.innerHTML = `
+              <img src="${it.image}" width="70">
+              <strong>${it.name}</strong> - ${it.price} (${it.category})
+              <form action="/admin/delete-item" method="post" style="display:inline;">
+                <input type="hidden" name="index" value="${idx}">
+                <input type="submit" value="Delete">
+              </form>
+              <form action="/admin/edit-item" method="post" enctype="multipart/form-data" style="margin-top:10px;">
+                <input type="hidden" name="index" value="${idx}">
+                <input type="text" name="name" value="${it.name}" required>
+                <input type="text" name="price" value="${it.price}" required>
+                <select name="category">
+                  <option ${it.category==='3.7L'?'selected':''}>3.7L</option>
+                  <option ${it.category==='1L'?'selected':''}>1L</option>
+                </select>
+                <input type="file" name="image" accept="image/*">
+                <input type="submit" value="Save Changes">
+              </form>
+            `;
+            container.appendChild(div);
+          });
+        });
+    }
 
-  <label>Image:</label><br>
-  <input type="file" name="image" accept="image/*"><br>
-
-  <input type="submit" value="Add Item">
-</form>
-
+    loadItems();
+  </script>
 </body>
 </html>
