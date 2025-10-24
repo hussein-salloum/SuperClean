@@ -1,46 +1,161 @@
+:root {
+  --primary: #0078ff;
+  --secondary: #00d4a1;
+  --bg: linear-gradient(135deg, #e0f7fa, #f1f8ff);
+  --card-bg: #fff;
+  --text-dark: #2b2b2b;
+  --text-light: #666;
+  --radius: 12px;
+  --shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
 body {
   font-family: 'Poppins', sans-serif;
   margin: 0;
-  background: #fafafa;
-  color: #333;
+  background: var(--bg);
+  color: var(--text-dark);
+  line-height: 1.6;
 }
+
+/* ---------- HEADER ---------- */
 header {
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  color: white;
+  padding: 25px 15px;
   text-align: center;
-  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
+
 header img {
-  width: 80px;
-  display: block;
-  margin: auto;
+  max-height: 70px;
+  vertical-align: middle;
+  margin-right: 10px;
+  border-radius: 8px;
 }
+
+header h1 {
+  display: inline-block;
+  font-size: 2em;
+  font-weight: 600;
+  vertical-align: middle;
+  margin: 0;
+}
+
+/* ---------- CONTAINER ---------- */
 .container {
-  padding: 20px;
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+/* ---------- FILTER BUTTONS ---------- */
+.filter-buttons {
   text-align: center;
+  margin-bottom: 40px;
 }
+
 .filter-buttons button {
-  margin: 5px;
-  padding: 10px 20px;
+  padding: 10px 24px;
+  margin: 6px;
+  background: white;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  border-radius: 30px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s ease;
 }
+
+.filter-buttons button:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.filter-buttons button.active {
+  background: var(--secondary);
+  color: white;
+  border-color: var(--secondary);
+  box-shadow: 0 3px 8px rgba(0, 212, 161, 0.3);
+}
+
+/* ---------- PRODUCT GRID ---------- */
 .product-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 25px;
 }
+
+/* ---------- PRODUCT CARDS ---------- */
 .product-card {
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  margin: 10px;
-  padding: 10px;
-  width: 150px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  text-align: center;
+  padding: 15px;
+  transition: all 0.3s ease;
+  position: relative;
 }
+
+.product-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+}
+
 .product-card img {
   width: 100%;
-  height: 120px;
-  object-fit: cover;
+  height: 180px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #f8f9fa;
+  margin-bottom: 15px;
+  transition: transform 0.3s ease;
 }
+
+.product-card:hover img {
+  transform: scale(1.05);
+}
+
+.product-name {
+  font-weight: 600;
+  font-size: 1.05em;
+  margin-top: 8px;
+}
+
+.product-price {
+  color: var(--secondary);
+  font-size: 1.1em;
+  margin-top: 6px;
+  font-weight: bold;
+}
+
+/* ---------- FOOTER ---------- */
 footer {
   text-align: center;
   padding: 20px;
-  background: #eee;
+  background: #ffffffb8;
+  color: var(--text-light);
+  font-size: 0.95em;
+  margin-top: 60px;
+  border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+footer strong {
+  color: var(--primary);
+}
+
+.copyright {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.85em;
+  color: #888;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 600px) {
+  header h1 {
+    display: block;
+    margin-top: 10px;
+  }
 }
