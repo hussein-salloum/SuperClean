@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Example 3.7L Item",
+    "price": "$12.99",
+    "category": "3.7L",
+    "image": "/images/example-3.7l.jpg"
+  },
+  {
+    "name": "Example 1L Item",
+    "price": "$5.49",
+    "category": "1L",
+    "image": "/images/example-1l.jpg"
+  },
+    {
+    "name": "Example 1L Item 2",
+    "price": "$3.49",
+    "category": "1L",
+    "image": "/images/example2-1l.jpg"
+  }
+]

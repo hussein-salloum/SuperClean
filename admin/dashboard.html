@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <style>
+    body { font-family: Arial, sans‑serif; margin:20px; }
+    form { max-width:400px; margin:auto; }
+    input, select { width:100%; padding:10px; margin:10px 0; box‑sizing:border‑box; }
+    input[type="submit"] { background:#004aad; color:white; border:none; cursor:pointer; }
+    input[type="submit"]:hover { background:#007bff; }
+    .logout { text-align:right; margin-bottom:20px; }
+  </style>
+</head>
+<body>
+
+<div class="logout">
+  <form action="/admin/logout" method="post">
+    <input type="submit" value="Logout">
+  </form>
+</div>
+
+<h2>Add New Item</h2>
+<form action="/admin/add‑item" method="post" enctype="multipart/form-data">
+  <label>Name:</label><br>
+  <input type="text" name="name" required><br>
+
+  <label>Price:</label><br>
+  <input type="text" name="price" required><br>
+
+  <label>Category:</label><br>
+  <select name="category" required>
+    <option value="3.7L">3.7 L</option>
+    <option value="1L">1 L</option>
+  </select><br>
+
+  <label>Image:</label><br>
+  <input type="file" name="image" accept="image/*"><br>
+
+  <input type="submit" value="Add Item">
+</form>
+
+</body>
+</html>
