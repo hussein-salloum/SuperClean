@@ -4,37 +4,71 @@
   <meta charset="UTF-8">
   <title>Admin Dashboard</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    input, select { width: 100%; padding: 8px; margin: 8px 0; box-sizing: border-box; }
-    input[type="submit"] { background: #004aad; color: white; border: none; cursor: pointer; }
-    input[type="submit"]:hover { background: #007bff; }
-    form { margin-bottom: 20px; }
-    img { vertical-align: middle; margin-right: 10px; }
-    .logout { text-align: right; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f4f6f8; color: #333; }
+    h2 { color: #004aad; }
+    .container { max-width: 900px; margin: auto; }
+    form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    input, select, textarea { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    textarea { resize: vertical; }
+    img { vertical-align: middle; margin-right: 10px; border-radius: 4px; }
+    .logout { text-align: right; margin-bottom: 20px; }
+
+    /* Buttons */
+    .btn-primary { background: #004aad; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 4px; font-weight: bold; transition: 0.3s; }
+    .btn-primary:hover { background: #007bff; }
+    .delete-btn { background: #e74c3c; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; transition: 0.3s; }
+    .delete-btn:hover { background: #c0392b; }
+
+    /* Item cards */
+    .item-card { background: #fff; border-radius: 8px; padding: 15px; margin: 15px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.08); display: flex; flex-direction: column; }
+    .item-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .item-info { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .item-info strong { font-size: 18px; }
+    .item-info em { font-size: 14px; color: #555; }
+    .item-actions { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .edit-form { display: flex; flex-direction: column; gap: 8px; background: #f9f9f9; padding: 10px; border-radius: 6px; }
+
+    /* Save Changes button */
+    .edit-form input[type="submit"] {
+      background: #004aad;
+      color: white;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+    .edit-form input[type="submit"]:hover {
+      background: #007bff;
+    }
   </style>
 </head>
 <body>
-  <div class="logout">
-    <form action="/admin/logout" method="post">
-      <input type="submit" value="Logout">
+  <div class="container">
+    <div class="logout">
+      <form action="/admin/logout" method="post">
+        <input type="submit" class="btn-primary" value="Logout">
+      </form>
+    </div>
+
+    <h2>Add New Item</h2>
+    <form action="/admin/add-item" method="post" enctype="multipart/form-data">
+      <input type="text" name="name" placeholder="Name" required>
+      <input type="text" name="price" placeholder="Price" required>
+      <select name="category" required>
+        <option value="3.7L">3.7 L</option>
+        <option value="1L">1 L</option>
+      </select>
+      <textarea name="description" placeholder="Description"></textarea>
+      <input type="file" name="image" accept="image/*">
+      <input type="submit" class="btn-primary" value="Add Item">
     </form>
+
+    <hr>
+    <h2>Current Items</h2>
+    <div id="itemsList"></div>
   </div>
-
-  <h2>Add New Item</h2>
-  <form action="/admin/add-item" method="post" enctype="multipart/form-data">
-    <input type="text" name="name" placeholder="Name" required>
-    <input type="text" name="price" placeholder="Price" required>
-    <select name="category" required>
-      <option value="3.7L">3.7 L</option>
-      <option value="1L">1 L</option>
-    </select>
-    <input type="file" name="image" accept="image/*">
-    <input type="submit" value="Add Item">
-  </form>
-
-  <hr>
-  <h2>Current Items</h2>
-  <div id="itemsList"></div>
 
   <script>
     function loadItems() {
@@ -48,26 +82,32 @@
             return;
           }
 
-          items.forEach((it, idx) => {
+          items.forEach(it => {
             const div = document.createElement('div');
-            div.style.border = '1px solid #ccc';
-            div.style.padding = '10px';
-            div.style.margin = '10px 0';
+            div.className = 'item-card';
             div.innerHTML = `
-              <img src="${it.image}" width="70">
-              <strong>${it.name}</strong> - ${it.price} (${it.category})
-              <form action="/admin/delete-item" method="post" style="display:inline;">
-                <input type="hidden" name="index" value="${idx}">
-                <input type="submit" value="Delete">
-              </form>
-              <form action="/admin/edit-item" method="post" enctype="multipart/form-data" style="margin-top:10px;">
-                <input type="hidden" name="index" value="${idx}">
+              <div class="item-header">
+                <div class="item-info">
+                  <img src="${it.image}" width="70" alt="${it.name}">
+                  <div>
+                    <strong>${it.name}</strong> - ${it.price} (${it.category})<br>
+                    <em>${it.description || ''}</em>
+                  </div>
+                </div>
+                <form action="/admin/delete-item" method="post" style="display:inline;">
+                  <input type="hidden" name="id" value="${it.id}">
+                  <input type="submit" class="delete-btn" value="Delete">
+                </form>
+              </div>
+              <form action="/admin/edit-item" method="post" enctype="multipart/form-data" class="edit-form">
+                <input type="hidden" name="id" value="${it.id}">
                 <input type="text" name="name" value="${it.name}" required>
                 <input type="text" name="price" value="${it.price}" required>
                 <select name="category">
                   <option ${it.category==='3.7L'?'selected':''}>3.7L</option>
                   <option ${it.category==='1L'?'selected':''}>1L</option>
                 </select>
+                <textarea name="description" placeholder="Description">${it.description || ''}</textarea>
                 <input type="file" name="image" accept="image/*">
                 <input type="submit" value="Save Changes">
               </form>

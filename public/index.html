@@ -6,64 +6,10 @@
   <title>SuperClean – Menu</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/public/style.css">
-  <style>
-    /* Quick Checkout Modal Styles */
-    .modal {
-      display: none; 
-      position: fixed; 
-      z-index: 1000; 
-      left: 0;
-      top: 0;
-      width: 100%; 
-      height: 100%; 
-      background-color: rgba(0,0,0,0.4); 
-    }
-    .modal-content {
-      background-color: #fff;
-      margin: 10% auto; 
-      padding: 20px;
-      border-radius: 8px;
-      width: 300px; 
-      text-align: center;
-      font-family: 'Poppins', sans-serif;
-    }
-    .close {
-      color: #aaa;
-      float: right;
-      font-size: 24px;
-      cursor: pointer;
-    }
-    #item-qty {
-      width: 60px;
-      margin-left: 10px;
-    }
-    #add-to-cart {
-      margin-top: 15px;
-      background: #17c993;
-      border: none;
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    #add-to-cart:hover { background: #0ea87a; }
-    .checkout-btn {
-      margin-top: 5px;
-      background: #0068ff;
-      color: #fff;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.9em;
-    }
-    .checkout-btn:hover { background: #004abf; }
-  </style>
 </head>
 <body>
   <header>
-    <img src="/public/logo.jpg" alt="Company Logo">
-    <h1>SuperClean</h1>
+    <img src="/public/logo.png" alt="Company Logo">
   </header>
 
   <div class="container">
@@ -80,21 +26,22 @@
     Designed with 💧 by <strong>SuperClean</strong>
   </footer>
 
-  <!-- Quick Checkout Modal -->
-  <div id="checkout-modal" class="modal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <h3 id="item-name"></h3>
-      <p>Price: $<span id="item-price"></span></p>
-      <label>Quantity: <input type="number" id="item-qty" value="1" min="1" /></label>
-      <p>Total: $<span id="item-total"></span></p>
-      <button id="add-to-cart">Add to Cart</button>
+  <!-- Floating Calculator Button -->
+  <button id="open-calculator" class="calculator-btn">🧮</button>
+
+  <!-- Calculator Modal -->
+  <div id="calculator-modal" class="modal">
+    <div class="modal-content calculator-box">
+      <span class="close calc-close">&times;</span>
+      <h2>🧾 Your Calculator</h2>
+      <div id="calc-items"></div>
+      <div id="calc-total">Total: $0.00</div>
     </div>
   </div>
 
   <script>
     let items = [];
-    let currentItem = null;
+    let cart = [];
 
     function fetchItems() {
       fetch('/api/items')
@@ -114,14 +61,14 @@
           card.className = 'product-card';
           card.innerHTML = `
             <img src="${it.image}" alt="${it.name}">
-            <div class="product-name">${it.name}</div>
-            <div class="product-price">${it.price} $</div>
-            <button class="checkout-btn">Quick Checkout</button>
+            <div class="product-info">
+              <div class="product-name">${it.name}</div>
+              <div class="product-desc">${it.description || "No description available."}</div>
+              <div class="product-price">${it.price} $</div>
+            </div>
           `;
+          card.addEventListener('click', () => addToCalculator(it));
           grid.appendChild(card);
-
-          // Attach click for quick checkout
-          card.querySelector('.checkout-btn').addEventListener('click', () => openCheckout(it));
         }
       });
     }
@@ -132,35 +79,91 @@
       renderItems(cat);
     }
 
-    function openCheckout(item) {
-      currentItem = item;
-      document.getElementById('item-name').textContent = item.name;
-      document.getElementById('item-price').textContent = item.price.toFixed(2);
-      document.getElementById('item-qty').value = 1;
-      document.getElementById('item-total').textContent = item.price.toFixed(2);
-      document.getElementById('checkout-modal').style.display = 'block';
+    // ---------- Calculator Logic ----------
+    function addToCalculator(product) {
+      const existing = cart.find(item => item.name === product.name);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        cart.push({ ...product, qty: 1, price: Number(product.price) });
+      }
+      updateCalculator();
     }
 
-    document.getElementById('item-qty').addEventListener('input', () => {
-      const qty = parseInt(document.getElementById('item-qty').value) || 1;
-      document.getElementById('item-total').textContent = (currentItem.price * qty).toFixed(2);
+   function updateCalculator() {
+  const calcList = document.getElementById('calc-items');
+  const calcTotal = document.getElementById('calc-total');
+  calcList.innerHTML = '';
+
+  let total = 0;
+  cart.forEach((item, index) => {
+    const subtotal = item.price * item.qty;
+    total += subtotal;
+
+    const row = document.createElement('div');
+    row.className = 'calc-item';
+    row.innerHTML = `
+      <div class="calc-info">
+        <strong>${item.name}</strong><br>
+        <span class="price-line">$${item.price.toFixed(2)} each</span>
+      </div>
+      <div class="calc-controls">
+        <button class="qty-btn" data-index="${index}" data-action="dec">–</button>
+        <input type="number" min="1" value="${item.qty}" data-index="${index}">
+        <button class="qty-btn" data-index="${index}" data-action="inc">+</button>
+        <span class="subtotal">$${subtotal.toFixed(2)}</span>
+        <button class="delete-btn" data-index="${index}" title="Remove">🗑️</button>
+      </div>
+    `;
+    calcList.appendChild(row);
+  });
+
+  calcTotal.textContent = `Total: $${total.toFixed(2)}`;
+}
+
+    // Quantity changes
+    document.addEventListener('click', e => {
+      if (e.target.matches('.qty-btn')) {
+        const index = e.target.dataset.index;
+        const action = e.target.dataset.action;
+        if (action === 'inc') cart[index].qty++;
+        if (action === 'dec' && cart[index].qty > 1) cart[index].qty--;
+        updateCalculator();
+      }
     });
 
-    document.getElementById('add-to-cart').addEventListener('click', () => {
-      const qty = parseInt(document.getElementById('item-qty').value) || 1;
-      alert(`${currentItem.name} x${qty} added to cart. Total: $${(currentItem.price * qty).toFixed(2)}`);
-      document.getElementById('checkout-modal').style.display = 'none';
+    document.addEventListener('input', e => {
+      if (e.target.matches('#calc-items input[type="number"]')) {
+        const index = e.target.dataset.index;
+        const newQty = parseInt(e.target.value) || 1;
+        cart[index].qty = newQty;
+        updateCalculator();
+      }
     });
 
-    document.querySelector('.close').addEventListener('click', () => {
-      document.getElementById('checkout-modal').style.display = 'none';
+    // Open & close calculator modal
+    document.getElementById('open-calculator').addEventListener('click', () => {
+      document.getElementById('calculator-modal').style.display = 'block';
+    });
+
+    document.querySelector('.calc-close').addEventListener('click', () => {
+      document.getElementById('calculator-modal').style.display = 'none';
     });
 
     window.addEventListener('click', e => {
-      if (e.target == document.getElementById('checkout-modal')) {
-        document.getElementById('checkout-modal').style.display = 'none';
+      if (e.target == document.getElementById('calculator-modal')) {
+        document.getElementById('calculator-modal').style.display = 'none';
       }
     });
+
+    // Delete item from calculator
+document.addEventListener('click', e => {
+  if (e.target.matches('.delete-btn')) {
+    const index = e.target.dataset.index;
+    cart.splice(index, 1);
+    updateCalculator();
+  }
+});
 
     fetchItems();
   </script>
