@@ -6,6 +6,11 @@ const multer = require('multer');
 const { Pool } = require('pg'); // ✅ PostgreSQL
 const fetch = require('node-fetch');
 
+const fs = require('fs');
+
+const ca = fs.readFileSync('/path/to/aiven-ca.crt').toString();
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -43,7 +48,10 @@ const upload = multer({ storage });
 // ========== PostgreSQL setup ==========
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // ✅ Required for Render PostgreSQL
+  ssl: {
+    ca: ca,
+    rejectUnauthorized: true
+  }
 });
 
 // Create table if not exists
