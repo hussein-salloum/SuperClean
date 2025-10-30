@@ -3,13 +3,8 @@ const bodyParser = require('body-parser');
 const session = require('express-session');
 const path = require('path');
 const multer = require('multer');
-const { Pool } = require('pg'); // ✅ PostgreSQL
+const { Pool } = require('pg');
 const fetch = require('node-fetch');
-
-const fs = require('fs');
-
-const ca = fs.readFileSync('/path/to/aiven-ca.crt').toString();
-
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,7 +23,7 @@ app.use(
 // Serve static files
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
-app.use(express.static(__dirname)); // serve index.html
+app.use(express.static(__dirname));
 
 // ========== Admin credentials ==========
 const ADMIN_USER = 'admin';
@@ -47,8 +42,10 @@ const upload = multer({ storage });
 
 // ========== PostgreSQL setup ==========
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // ✅ Required for Render PostgreSQL
+  connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_f8YNitT7GmKz@ep-icy-bar-afji0ubu-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Create table if not exists
@@ -72,7 +69,7 @@ const pool = new Pool({
 
 // ========== Routes ==========
 
-// 🩺 Health route
+// Health route
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
 // Public API
@@ -93,7 +90,7 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin/login.html'));
 });
 
-// Handle admin login
+// Handle login
 app.post('/admin/login', (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
@@ -126,7 +123,7 @@ app.post('/admin/add-item', upload.single('image'), async (req, res) => {
 });
 
 // Edit item
-app.post('/admin/edit-item', upload.single('image'), async (req, res) => {
+app.post('/admin/edit‑item', upload.single('image'), async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
   const { id, name, price, category, description } = req.body;
 
@@ -151,7 +148,7 @@ app.post('/admin/edit-item', upload.single('image'), async (req, res) => {
 });
 
 // Delete item
-app.post('/admin/delete-item', async (req, res) => {
+app.post('/admin/delete‑item', async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
   const { id } = req.body;
   try {
@@ -167,13 +164,12 @@ app.post('/admin/delete-item', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 
-  // 🕒 Self-ping every 5 minutes to prevent sleep
   const appUrl =
     process.env.RENDER_EXTERNAL_URL ||
-    'https://superclean.onrender.com/public/index.html';
+    'https://your‑app‑url‑here';
   setInterval(() => {
     fetch(`${appUrl}/health`)
-      .then((res) => console.log(`Self-ping OK: ${res.status}`))
-      .catch((err) => console.error('Self-ping failed:', err.message));
+      .then((res) => console.log(`Self‑ping OK: ${res.status}`))
+      .catch((err) => console.error('Self‑ping failed:', err.message));
   }, 5 * 60 * 1000);
 });
