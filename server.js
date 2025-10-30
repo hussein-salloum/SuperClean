@@ -7,7 +7,8 @@ const { Pool } = require('pg'); // ✅ PostgreSQL
 const fetch = require('node-fetch');
 
 const fs = require('fs');
-const caCert = fs.readFileSync(path.join(__dirname, 'certs', 'ca.pem')).toString();
+
+const ca = fs.readFileSync('/path/to/aiven-ca.crt').toString();
 
 
 const app = express();
@@ -47,10 +48,7 @@ const upload = multer({ storage });
 // ========== PostgreSQL setup ==========
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    ca: caCert,
-    rejectUnauthorized: true
-  }
+  ssl: { rejectUnauthorized: false }, // ✅ Required for Render PostgreSQL
 });
 
 // Create table if not exists
