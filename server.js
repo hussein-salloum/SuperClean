@@ -42,10 +42,8 @@ const upload = multer({ storage });
 
 // ========== PostgreSQL setup ==========
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_f8YNitT7GmKz@ep-icy-bar-afji0ubu-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
-  ssl: {
-    rejectUnauthorized: false
-  }
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
 // Create table if not exists
