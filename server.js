@@ -7,8 +7,7 @@ const { Pool } = require('pg'); // ✅ PostgreSQL
 const fetch = require('node-fetch');
 
 const fs = require('fs');
-
-const ca = fs.readFileSync('/path/to/aiven-ca.crt').toString();
+const caCert = fs.readFileSync(path.join(__dirname, 'certs', 'ca.pem')).toString();
 
 
 const app = express();
@@ -49,7 +48,7 @@ const upload = multer({ storage });
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    ca: ca,
+    ca: caCert,
     rejectUnauthorized: true
   }
 });
