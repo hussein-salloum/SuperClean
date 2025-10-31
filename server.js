@@ -3,11 +3,17 @@ const bodyParser = require('body-parser');
 const session = require('express-session');
 const path = require('path');
 const multer = require('multer');
-const { Pool } = require('pg');
-const fetch = require('node-fetch');
+const Parse = require('parse/node');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ========== Parse Setup ==========
+Parse.initialize(
+  process.env.PARSE_APP_ID || 'ndllquiCdZTiGY1MMBsEN1MYhF8p89iK15oEYqW4',
+  process.env.PARSE_JS_KEY || 'Qwcb3M1flH9cRlcCovDJ0YvKrb91Xmvp9voPd1Iz'
+);
+Parse.serverURL = process.env.PARSE_SERVER_URL || 'https://parseapi.back4app.com';
 
 // ========== Middleware ==========
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -40,41 +46,24 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ========== PostgreSQL setup ==========
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
-// Create table if not exists
-(async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS items (
-        id SERIAL PRIMARY KEY,
-        name TEXT,
-        price TEXT,
-        category TEXT,
-        description TEXT,
-        image TEXT
-      )
-    `);
-    console.log('✅ Connected to PostgreSQL and ensured "items" table exists.');
-  } catch (err) {
-    console.error('❌ PostgreSQL connection error:', err);
-  }
-})();
-
 // ========== Routes ==========
 
-// Health route
-app.get('/health', (req, res) => res.status(200).send('OK'));
-
-// Public API
+// Public API (GET all items)
 app.get('/api/items', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM items ORDER BY id DESC');
-    res.json(rows);
+    const Item = Parse.Object.extend('Item');
+    const query = new Parse.Query(Item);
+    query.descending('createdAt');
+    const results = await query.find();
+    const data = results.map((obj) => ({
+      id: obj.id,
+      name: obj.get('name'),
+      price: obj.get('price'),
+      category: obj.get('category'),
+      description: obj.get('description'),
+      image: obj.get('image'),
+    }));
+    res.json(data);
   } catch (err) {
     console.error(err);
     res.status(500).json([]);
@@ -108,11 +97,16 @@ app.post('/admin/add-item', upload.single('image'), async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
   const { name, price, category, description } = req.body;
   const image = req.file ? '/images/' + req.file.filename : '';
+
   try {
-    await pool.query(
-      'INSERT INTO items (name, price, category, description, image) VALUES ($1, $2, $3, $4, $5)',
-      [name, price, category, description, image]
-    );
+    const Item = Parse.Object.extend('Item');
+    const item = new Item();
+    item.set('name', name);
+    item.set('price', price);
+    item.set('category', category);
+    item.set('description', description);
+    item.set('image', image);
+    await item.save();
     res.redirect('/admin');
   } catch (err) {
     console.error(err);
@@ -121,23 +115,19 @@ app.post('/admin/add-item', upload.single('image'), async (req, res) => {
 });
 
 // Edit item
-app.post('/admin/edit‑item', upload.single('image'), async (req, res) => {
+app.post('/admin/edit-item', upload.single('image'), async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
   const { id, name, price, category, description } = req.body;
 
   try {
-    if (req.file) {
-      const image = '/images/' + req.file.filename;
-      await pool.query(
-        'UPDATE items SET name=$1, price=$2, category=$3, description=$4, image=$5 WHERE id=$6',
-        [name, price, category, description, image, id]
-      );
-    } else {
-      await pool.query(
-        'UPDATE items SET name=$1, price=$2, category=$3, description=$4 WHERE id=$5',
-        [name, price, category, description, id]
-      );
-    }
+    const query = new Parse.Query('Item');
+    const item = await query.get(id);
+    item.set('name', name);
+    item.set('price', price);
+    item.set('category', category);
+    item.set('description', description);
+    if (req.file) item.set('image', '/images/' + req.file.filename);
+    await item.save();
     res.redirect('/admin');
   } catch (err) {
     console.error(err);
@@ -146,11 +136,13 @@ app.post('/admin/edit‑item', upload.single('image'), async (req, res) => {
 });
 
 // Delete item
-app.post('/admin/delete‑item', async (req, res) => {
+app.post('/admin/delete-item', async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
   const { id } = req.body;
   try {
-    await pool.query('DELETE FROM items WHERE id=$1', [id]);
+    const query = new Parse.Query('Item');
+    const item = await query.get(id);
+    await item.destroy();
     res.redirect('/admin');
   } catch (err) {
     console.error(err);
@@ -161,13 +153,4 @@ app.post('/admin/delete‑item', async (req, res) => {
 // ========== Start Server ==========
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-
-  const appUrl =
-    process.env.RENDER_EXTERNAL_URL ||
-    'https://your‑app‑url‑here';
-  setInterval(() => {
-    fetch(`${appUrl}/health`)
-      .then((res) => console.log(`Self‑ping OK: ${res.status}`))
-      .catch((err) => console.error('Self‑ping failed:', err.message));
-  }, 5 * 60 * 1000);
 });
