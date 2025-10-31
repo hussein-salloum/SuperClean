@@ -27,9 +27,16 @@ app.use(
     saveUninitialized: false,
   })
 );
+
+// Serve static files
+app.use(express.static(__dirname));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
-app.use(express.static(__dirname));
+
+// Serve index.html at root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
+});
 
 // ========== Admin credentials ==========
 const ADMIN_USER = process.env.ADMIN_USER;
