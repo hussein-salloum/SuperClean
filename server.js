@@ -1,3 +1,4 @@
+require('dotenv').config(); // Load .env
 const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
@@ -8,12 +9,13 @@ const Parse = require('parse/node');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ========== Parse Setup ==========
+// ========== Parse Init ==========
 Parse.initialize(
-  process.env.PARSE_APP_ID || 'ndllquiCdZTiGY1MMBsEN1MYhF8p89iK15oEYqW4',
-  process.env.PARSE_JS_KEY || 'Qwcb3M1flH9cRlcCovDJ0YvKrb91Xmvp9voPd1Iz'
+  process.env.PARSE_APP_ID,
+  process.env.PARSE_JS_KEY,
+  process.env.PARSE_MASTER_KEY
 );
-Parse.serverURL = process.env.PARSE_SERVER_URL || 'https://parseapi.back4app.com';
+Parse.serverURL = process.env.PARSE_SERVER_URL;
 
 // ========== Middleware ==========
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -25,55 +27,26 @@ app.use(
     saveUninitialized: false,
   })
 );
-
-// Serve static files
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 app.use(express.static(__dirname));
 
 // ========== Admin credentials ==========
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'Mazen2025!';
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS = process.env.ADMIN_PASS;
 
 // ========== Multer setup ==========
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, 'public/images'));
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '_' + file.originalname);
-  },
+  destination: (req, file, cb) => cb(null, path.join(__dirname, 'public/images')),
+  filename: (req, file, cb) => cb(null, Date.now() + '_' + file.originalname)
 });
 const upload = multer({ storage });
 
 // ========== Routes ==========
 
-// Public API (GET all items)
-app.get('/api/items', async (req, res) => {
-  try {
-    const Item = Parse.Object.extend('Item');
-    const query = new Parse.Query(Item);
-    query.descending('createdAt');
-    const results = await query.find();
-    const data = results.map((obj) => ({
-      id: obj.id,
-      name: obj.get('name'),
-      price: obj.get('price'),
-      category: obj.get('category'),
-      description: obj.get('description'),
-      image: obj.get('image'),
-    }));
-    res.json(data);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json([]);
-  }
-});
-
-// Admin login page
+// Login page
 app.get('/admin', (req, res) => {
-  if (req.session.loggedIn)
-    return res.sendFile(path.join(__dirname, 'admin/dashboard.html'));
+  if (req.session.loggedIn) return res.sendFile(path.join(__dirname, 'admin/dashboard.html'));
   res.sendFile(path.join(__dirname, 'admin/login.html'));
 });
 
@@ -95,21 +68,25 @@ app.post('/admin/logout', (req, res) => {
 // Add new item
 app.post('/admin/add-item', upload.single('image'), async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
+
   const { name, price, category, description } = req.body;
   const image = req.file ? '/images/' + req.file.filename : '';
 
   try {
     const Item = Parse.Object.extend('Item');
     const item = new Item();
+
     item.set('name', name);
     item.set('price', price);
     item.set('category', category);
     item.set('description', description);
     item.set('image', image);
-    await item.save();
+
+    await item.save(null, { useMasterKey: true });
+
     res.redirect('/admin');
   } catch (err) {
-    console.error(err);
+    console.error('Error saving item:', err);
     res.status(500).send('Error adding item');
   }
 });
@@ -117,20 +94,28 @@ app.post('/admin/add-item', upload.single('image'), async (req, res) => {
 // Edit item
 app.post('/admin/edit-item', upload.single('image'), async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
+
   const { id, name, price, category, description } = req.body;
 
   try {
-    const query = new Parse.Query('Item');
-    const item = await query.get(id);
+    const Item = Parse.Object.extend('Item');
+    const query = new Parse.Query(Item);
+    const item = await query.get(id, { useMasterKey: true });
+
     item.set('name', name);
     item.set('price', price);
     item.set('category', category);
     item.set('description', description);
-    if (req.file) item.set('image', '/images/' + req.file.filename);
-    await item.save();
+
+    if (req.file) {
+      const image = '/images/' + req.file.filename;
+      item.set('image', image);
+    }
+
+    await item.save(null, { useMasterKey: true });
     res.redirect('/admin');
   } catch (err) {
-    console.error(err);
+    console.error('Error editing item:', err);
     res.status(500).send('Error editing item');
   }
 });
@@ -138,19 +123,45 @@ app.post('/admin/edit-item', upload.single('image'), async (req, res) => {
 // Delete item
 app.post('/admin/delete-item', async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
+
   const { id } = req.body;
+
   try {
-    const query = new Parse.Query('Item');
-    const item = await query.get(id);
-    await item.destroy();
+    const Item = Parse.Object.extend('Item');
+    const query = new Parse.Query(Item);
+    const item = await query.get(id, { useMasterKey: true });
+
+    await item.destroy({ useMasterKey: true });
     res.redirect('/admin');
   } catch (err) {
-    console.error(err);
+    console.error('Error deleting item:', err);
     res.status(500).send('Error deleting item');
   }
 });
 
-// ========== Start Server ==========
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+// Public API: fetch items
+app.get('/api/items', async (req, res) => {
+  try {
+    const Item = Parse.Object.extend('Item');
+    const query = new Parse.Query(Item);
+    const items = await query.descending('createdAt').find({ useMasterKey: true });
+
+    // Convert Parse objects to plain JS objects
+    const plainItems = items.map(it => ({
+      id: it.id,
+      name: it.get('name'),
+      price: it.get('price'),
+      category: it.get('category'),
+      description: it.get('description'),
+      image: it.get('image')
+    }));
+
+    res.json(plainItems);
+  } catch (err) {
+    console.error('Error fetching items:', err);
+    res.status(500).json([]);
+  }
 });
+
+// Start server
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
