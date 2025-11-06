@@ -25,9 +25,8 @@ app.use(
   })
 );
 
-// Serve static files
-app.use(express.static(__dirname));
-app.use('/public', express.static(path.join(__dirname, 'public')));
+// Serve static files from 'public' directly at root
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ====== Admin credentials ======
 const ADMIN_USER = process.env.ADMIN_USER;
