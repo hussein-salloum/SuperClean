@@ -1,23 +1,20 @@
-require('dotenv').config(); // Load .env
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const path = require('path');
 const multer = require('multer');
-const Parse = require('parse/node');
+const fs = require('fs');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ========== Parse Init ==========
-Parse.initialize(
-  process.env.PARSE_APP_ID,
-  process.env.PARSE_JS_KEY,
-  process.env.PARSE_MASTER_KEY
-);
-Parse.serverURL = process.env.PARSE_SERVER_URL;
+// ====== Supabase Init ======
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const BUCKET = process.env.SUPABASE_BUCKET || 'product-images';
 
-// ========== Middleware ==========
+// ====== Middleware ======
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(
@@ -31,25 +28,15 @@ app.use(
 // Serve static files
 app.use(express.static(__dirname));
 app.use('/public', express.static(path.join(__dirname, 'public')));
-app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
-// Serve index.html at root
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
-});
-
-// ========== Admin credentials ==========
+// ====== Admin credentials ======
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
-// ========== Multer setup ==========
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, 'public/images')),
-  filename: (req, file, cb) => cb(null, Date.now() + '_' + file.originalname)
-});
-const upload = multer({ storage });
+// ====== Multer setup (temporary local upload before sending to Supabase) ======
+const upload = multer({ dest: path.join(__dirname, 'tmp') });
 
-// ========== Routes ==========
+// ====== Routes ======
 
 // Login page
 app.get('/admin', (req, res) => {
@@ -72,54 +59,70 @@ app.post('/admin/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/admin'));
 });
 
-// Add new item
+// ====== Helper: upload image to Supabase Storage ======
+async function uploadToSupabaseStorage(localPath, filename) {
+  const fileBuffer = fs.readFileSync(localPath);
+  const ext = path.extname(filename);
+  const remoteName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(BUCKET)
+    .upload(remoteName, fileBuffer, {
+      contentType: 'image/jpeg',
+      upsert: false,
+    });
+
+  if (uploadError) throw uploadError;
+
+  // Get public URL
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(BUCKET).getPublicUrl(remoteName);
+
+  // Cleanup local file
+  fs.unlinkSync(localPath);
+
+  return publicUrl;
+}
+
+// ====== Add new item ======
 app.post('/admin/add-item', upload.single('image'), async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
-
   const { name, price, category, description } = req.body;
-  const image = req.file ? '/images/' + req.file.filename : '';
+  let imageUrl = '';
 
   try {
-    const Item = Parse.Object.extend('Item');
-    const item = new Item();
+    if (req.file) {
+      imageUrl = await uploadToSupabaseStorage(req.file.path, req.file.originalname);
+    }
 
-    item.set('name', name);
-    item.set('price', price);
-    item.set('category', category);
-    item.set('description', description);
-    item.set('image', image);
-
-    await item.save(null, { useMasterKey: true });
+    const { error } = await supabase.from('items').insert([
+      { name, price, category, description, image: imageUrl },
+    ]);
+    if (error) throw error;
 
     res.redirect('/admin');
   } catch (err) {
-    console.error('Error saving item:', err);
+    console.error('Error adding item:', err);
     res.status(500).send('Error adding item');
   }
 });
 
-// Edit item
+// ====== Edit item ======
 app.post('/admin/edit-item', upload.single('image'), async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
-
   const { id, name, price, category, description } = req.body;
+  const updates = { name, price, category, description };
 
   try {
-    const Item = Parse.Object.extend('Item');
-    const query = new Parse.Query(Item);
-    const item = await query.get(id, { useMasterKey: true });
-
-    item.set('name', name);
-    item.set('price', price);
-    item.set('category', category);
-    item.set('description', description);
-
     if (req.file) {
-      const image = '/images/' + req.file.filename;
-      item.set('image', image);
+      const imageUrl = await uploadToSupabaseStorage(req.file.path, req.file.originalname);
+      updates.image = imageUrl;
     }
 
-    await item.save(null, { useMasterKey: true });
+    const { error } = await supabase.from('items').update(updates).eq('id', id);
+    if (error) throw error;
+
     res.redirect('/admin');
   } catch (err) {
     console.error('Error editing item:', err);
@@ -127,18 +130,14 @@ app.post('/admin/edit-item', upload.single('image'), async (req, res) => {
   }
 });
 
-// Delete item
+// ====== Delete item ======
 app.post('/admin/delete-item', async (req, res) => {
   if (!req.session.loggedIn) return res.status(403).send('Not authorized');
-
   const { id } = req.body;
 
   try {
-    const Item = Parse.Object.extend('Item');
-    const query = new Parse.Query(Item);
-    const item = await query.get(id, { useMasterKey: true });
-
-    await item.destroy({ useMasterKey: true });
+    const { error } = await supabase.from('items').delete().eq('id', id);
+    if (error) throw error;
     res.redirect('/admin');
   } catch (err) {
     console.error('Error deleting item:', err);
@@ -146,29 +145,21 @@ app.post('/admin/delete-item', async (req, res) => {
   }
 });
 
-// Public API: fetch items
+// ====== Public API: fetch items ======
 app.get('/api/items', async (req, res) => {
   try {
-    const Item = Parse.Object.extend('Item');
-    const query = new Parse.Query(Item);
-    const items = await query.descending('createdAt').find({ useMasterKey: true });
+    const { data: items, error } = await supabase
+      .from('items')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    // Convert Parse objects to plain JS objects
-    const plainItems = items.map(it => ({
-      id: it.id,
-      name: it.get('name'),
-      price: it.get('price'),
-      category: it.get('category'),
-      description: it.get('description'),
-      image: it.get('image')
-    }));
-
-    res.json(plainItems);
+    if (error) throw error;
+    res.json(items);
   } catch (err) {
     console.error('Error fetching items:', err);
     res.status(500).json([]);
   }
 });
 
-// Start server
+// ====== Start Server ======
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
