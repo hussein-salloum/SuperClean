@@ -39,6 +39,12 @@
     </div>
   </div>
 
+  <!-- Image Popup Modal -->
+  <div id="image-modal" class="modal">
+    <span class="close" id="image-close">&times;</span>
+    <img id="modal-image" src="" alt="Product Image">
+  </div>
+
   <script>
     let items = [];
     let cart = [];
@@ -55,19 +61,39 @@
     function renderItems(category) {
       const grid = document.getElementById('productGrid');
       grid.innerHTML = '';
+
       items.forEach(it => {
         if (category === 'all' || it.category === category) {
           const card = document.createElement('div');
           card.className = 'product-card';
+
           card.innerHTML = `
-            <img src="${it.image}" alt="${it.name}">
+            <div class="image-wrapper" data-open-image>
+              <img src="${it.image}" alt="${it.name}" class="card-img">
+              <div class="view-icon">🔍</div>
+            </div>
+
             <div class="product-info">
               <div class="product-name">${it.name}</div>
               <div class="product-desc">${it.description || "No description available."}</div>
               <div class="product-price">${it.price} $</div>
             </div>
           `;
-          card.addEventListener('click', () => addToCalculator(it));
+
+          // Image click → open popup
+          card.querySelector("[data-open-image]").addEventListener("click", e => {
+            e.stopPropagation(); // prevent calculator click
+            const modal = document.getElementById("image-modal");
+            const modalImg = document.getElementById("modal-image");
+            modalImg.src = it.image;
+            modal.style.display = "flex";
+          });
+
+          // Card click → add to calculator
+          card.addEventListener("click", () => {
+            addToCalculator(it);
+          });
+
           grid.appendChild(card);
         }
       });
@@ -90,39 +116,40 @@
       updateCalculator();
     }
 
-   function updateCalculator() {
-  const calcList = document.getElementById('calc-items');
-  const calcTotal = document.getElementById('calc-total');
-  calcList.innerHTML = '';
+    function updateCalculator() {
+      const calcList = document.getElementById('calc-items');
+      const calcTotal = document.getElementById('calc-total');
+      calcList.innerHTML = '';
 
-  let total = 0;
-  cart.forEach((item, index) => {
-    const subtotal = item.price * item.qty;
-    total += subtotal;
+      let total = 0;
+      cart.forEach((item, index) => {
+        const subtotal = item.price * item.qty;
+        total += subtotal;
 
-    const row = document.createElement('div');
-    row.className = 'calc-item';
-    row.innerHTML = `
-      <div class="calc-info">
-        <strong>${item.name}</strong><br>
-        <span class="price-line">$${item.price.toFixed(2)} each</span>
-      </div>
-      <div class="calc-controls">
-        <button class="qty-btn" data-index="${index}" data-action="dec">–</button>
-        <input type="number" min="1" value="${item.qty}" data-index="${index}">
-        <button class="qty-btn" data-index="${index}" data-action="inc">+</button>
-        <span class="subtotal">$${subtotal.toFixed(2)}</span>
-        <button class="delete-btn" data-index="${index}" title="Remove">🗑️</button>
-      </div>
-    `;
-    calcList.appendChild(row);
-  });
+        const row = document.createElement('div');
+        row.className = 'calc-item';
+        row.innerHTML = `
+          <div class="calc-info">
+            <strong>${item.name}</strong><br>
+            <span class="price-line">$${item.price.toFixed(2)} each</span>
+          </div>
+          <div class="calc-controls">
+            <button class="qty-btn" data-index="${index}" data-action="dec">–</button>
+            <input type="number" min="1" value="${item.qty}" data-index="${index}">
+            <button class="qty-btn" data-index="${index}" data-action="inc">+</button>
+            <span class="subtotal">$${subtotal.toFixed(2)}</span>
+            <button class="delete-btn" data-index="${index}" title="Remove">🗑️</button>
+          </div>
+        `;
+        calcList.appendChild(row);
+      });
 
-  calcTotal.textContent = `Total: $${total.toFixed(2)}`;
-}
+      calcTotal.textContent = `Total: $${total.toFixed(2)}`;
+    }
 
-    // Quantity changes
+    // Quantity and delete buttons
     document.addEventListener('click', e => {
+      // Quantity buttons
       if (e.target.matches('.qty-btn')) {
         const index = e.target.dataset.index;
         const action = e.target.dataset.action;
@@ -130,8 +157,16 @@
         if (action === 'dec' && cart[index].qty > 1) cart[index].qty--;
         updateCalculator();
       }
+
+      // Delete button
+      if (e.target.matches('.delete-btn')) {
+        const index = e.target.dataset.index;
+        cart.splice(index, 1);
+        updateCalculator();
+      }
     });
 
+    // Manual quantity input
     document.addEventListener('input', e => {
       if (e.target.matches('#calc-items input[type="number"]')) {
         const index = e.target.dataset.index;
@@ -154,16 +189,15 @@
       if (e.target == document.getElementById('calculator-modal')) {
         document.getElementById('calculator-modal').style.display = 'none';
       }
+      if (e.target == document.getElementById('image-modal')) {
+        document.getElementById('image-modal').style.display = 'none';
+      }
     });
 
-    // Delete item from calculator
-document.addEventListener('click', e => {
-  if (e.target.matches('.delete-btn')) {
-    const index = e.target.dataset.index;
-    cart.splice(index, 1);
-    updateCalculator();
-  }
-});
+    // Close image modal button
+    document.getElementById('image-close').addEventListener('click', () => {
+      document.getElementById('image-modal').style.display = 'none';
+    });
 
     fetchItems();
   </script>

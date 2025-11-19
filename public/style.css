@@ -86,7 +86,7 @@ header h1 {
   gap: 25px;
 }
 
-/* ---------- PRODUCT CARDS ---------- */
+/* Product card layout */
 .product-card {
   display: flex;
   align-items: center;
@@ -97,7 +97,6 @@ header h1 {
   padding: 15px;
   transition: all 0.3s ease;
   position: relative;
-  text-align: left; /* align text nicely */
 }
 
 .product-card:hover {
@@ -105,18 +104,39 @@ header h1 {
   box-shadow: 0 10px 20px rgba(0,0,0,0.12);
 }
 
-.product-card img {
+/* Image container with overlay icon */
+.image-wrapper {
+  position: relative;
   width: 100px;
   height: 100px;
-  object-fit: contain;
-  border-radius: 10px;
-  background: #f8f9fa;
   margin-right: 15px;
-  transition: transform 0.3s ease;
+  cursor: pointer;
 }
 
-.product-card:hover img {
-  transform: scale(1.05);
+.card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* FIX black bars */
+  border-radius: 10px;
+  background: #f8f9fa;
+}
+
+/* VIEW ICON */
+.view-icon {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: rgba(0,0,0,0.65);
+  color: white;
+  font-size: 0.9em;
+  padding: 6px 8px;
+  border-radius: 8px;
+  opacity: 0;
+  transition: 0.25s ease;
+}
+
+.image-wrapper:hover .view-icon {
+  opacity: 1;
 }
 
 .product-name {
@@ -372,3 +392,42 @@ footer strong {
   transform: scale(1.2);
   color: #e60000;
 }
+
+/* Bigger logo */
+header img {
+  width: 250px;
+  max-width: 90%;
+  display: block;
+  margin: 20px auto;
+}
+
+/* Image Popup Modal */
+#image-modal {
+  display: none;
+  position: fixed;
+  z-index: 3000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.85);
+  justify-content: center;
+  align-items: center;
+}
+
+#image-modal img {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 12px;
+  box-shadow: 0 0 25px #000;
+}
+
+#image-modal .close {
+  position: absolute;
+  top: 20px;
+  right: 40px;
+  color: white;
+  font-size: 50px;
+  cursor: pointer;
+}
+
